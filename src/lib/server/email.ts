@@ -335,7 +335,7 @@ export async function sendLeadNotificationEmail(
 	const recipients = overrideRecipients ?? getRecipientEmails();
 	if (recipients.length === 0) {
 		console.error(
-			'[EmailService] No recipient email addresses found in RECIPIENT_EMAIL_1 or RECIPIENT_EMAIL_2.'
+			'[EmailService] No recipient email addresses found in RESEND_EMAIL_1 through RESEND_EMAIL_4.'
 		);
 		return {
 			success: false,

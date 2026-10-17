@@ -38,19 +38,20 @@ export function getResendFromEmail(): string {
 
 /**
  * Configured recipient email addresses.
- * Reads RECIPIENT_EMAIL_1 and RECIPIENT_EMAIL_2.
- * Also supports RECIPIENT_EMAILS as a comma-separated list.
+ * Reads RESEND_EMAIL_1, RESEND_EMAIL_2, RESEND_EMAIL_3, and RESEND_EMAIL_4.
+ * Also supports legacy RECIPIENT_EMAIL_1 / RECIPIENT_EMAIL_2 and RECIPIENT_EMAILS as a comma-separated list.
  */
 export function getRecipientEmails(): string[] {
 	const recipients: string[] = [];
 
-	const email1 = readEnv('RECIPIENT_EMAIL_1');
-	const email2 = readEnv('RECIPIENT_EMAIL_2');
+	for (let i = 1; i <= 4; i++) {
+		const email = readEnv(`RESEND_EMAIL_${i}`) || readEnv(`RECIPIENT_EMAIL_${i}`);
+		if (email && !recipients.includes(email)) {
+			recipients.push(email);
+		}
+	}
 
-	if (email1) recipients.push(email1);
-	if (email2 && !recipients.includes(email2)) recipients.push(email2);
-
-	const emailsCombined = readEnv('RECIPIENT_EMAILS');
+	const emailsCombined = readEnv('RESEND_EMAILS') || readEnv('RECIPIENT_EMAILS');
 	if (emailsCombined) {
 		const parsed = emailsCombined
 			.split(',')

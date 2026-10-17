@@ -70,9 +70,13 @@ cp .env.example .env
 | :------------------ | :--------------------------------------------------------------------- | :------------------------------------------------------------------------ |
 | `RESEND_API_KEY`    | Your Resend API key (`re_...`)                                         | `re_1234567890abcdef`                                                     |
 | `RESEND_FROM_EMAIL` | Verified sender address in Resend                                      | `Platinum Leads <notifications@ikhtiyaar.com>`                            |
-| `RECIPIENT_EMAIL_1` | First recipient email address                                          | `office@cleanmastercarpetcleaning.com`                                    |
-| `RECIPIENT_EMAIL_2` | Second recipient email address                                         | `muhammad.bilal@ikhtiyaar.com`                                            |
+| `RESEND_EMAIL_1`    | First recipient email address                                          | `office@cleanmastercarpetcleaning.com`                                    |
+| `RESEND_EMAIL_2`    | Second recipient email address                                         | `muhammad.bilal@ikhtiyaar.com`                                            |
+| `RESEND_EMAIL_3`    | Third recipient email address                                          | `lead3@platinumrestoration.com`                                           |
+| `RESEND_EMAIL_4`    | Fourth recipient email address                                         | `lead4@platinumrestoration.com`                                           |
 | `ALLOWED_ORIGINS`   | Comma-separated list of allowed frontend origins (no trailing slashes) | `https://www.platinumsg.com,https://platinumsg.com,http://localhost:5173` |
+
+> **Note:** For backwards compatibility, legacy `RECIPIENT_EMAIL_1` and `RECIPIENT_EMAIL_2` keys are also supported as fallbacks.
 
 ---
 

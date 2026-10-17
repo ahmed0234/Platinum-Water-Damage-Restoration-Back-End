@@ -117,7 +117,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		);
 	}
 
-	// 5. Send notification email to both recipients using Resend
+	// 5. Send notification email to configured recipients using Resend
 	const emailResult = await sendLeadNotificationEmail(validation.data);
 	if (!emailResult.success) {
 		return json(

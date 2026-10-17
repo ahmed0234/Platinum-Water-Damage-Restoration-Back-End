@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { getRecipientEmails } from './config.js';
 import {
 	escapeHtml,
 	renderLeadEmailHtml,
@@ -153,10 +154,18 @@ describe('sendLeadNotificationEmail execution', () => {
 		const orig1 = process.env.RECIPIENT_EMAIL_1;
 		const orig2 = process.env.RECIPIENT_EMAIL_2;
 		const origAll = process.env.RECIPIENT_EMAILS;
+		const origResend1 = process.env.RESEND_EMAIL_1;
+		const origResend2 = process.env.RESEND_EMAIL_2;
+		const origResend3 = process.env.RESEND_EMAIL_3;
+		const origResend4 = process.env.RESEND_EMAIL_4;
 
 		delete process.env.RECIPIENT_EMAIL_1;
 		delete process.env.RECIPIENT_EMAIL_2;
 		delete process.env.RECIPIENT_EMAILS;
+		delete process.env.RESEND_EMAIL_1;
+		delete process.env.RESEND_EMAIL_2;
+		delete process.env.RESEND_EMAIL_3;
+		delete process.env.RESEND_EMAIL_4;
 
 		const result = await sendLeadNotificationEmail({
 			service: 'Water damage restoration',
@@ -175,5 +184,76 @@ describe('sendLeadNotificationEmail execution', () => {
 		if (orig1) process.env.RECIPIENT_EMAIL_1 = orig1;
 		if (orig2) process.env.RECIPIENT_EMAIL_2 = orig2;
 		if (origAll) process.env.RECIPIENT_EMAILS = origAll;
+		if (origResend1) process.env.RESEND_EMAIL_1 = origResend1;
+		if (origResend2) process.env.RESEND_EMAIL_2 = origResend2;
+		if (origResend3) process.env.RESEND_EMAIL_3 = origResend3;
+		if (origResend4) process.env.RESEND_EMAIL_4 = origResend4;
+	});
+});
+
+describe('Recipient Email Configuration', () => {
+	it('should read all 4 emails from RESEND_EMAIL_1 through RESEND_EMAIL_4', () => {
+		const orig = {
+			r1: process.env.RESEND_EMAIL_1,
+			r2: process.env.RESEND_EMAIL_2,
+			r3: process.env.RESEND_EMAIL_3,
+			r4: process.env.RESEND_EMAIL_4,
+			legacy1: process.env.RECIPIENT_EMAIL_1,
+			legacy2: process.env.RECIPIENT_EMAIL_2
+		};
+
+		process.env.RESEND_EMAIL_1 = 'recipient1@example.com';
+		process.env.RESEND_EMAIL_2 = 'recipient2@example.com';
+		process.env.RESEND_EMAIL_3 = 'recipient3@example.com';
+		process.env.RESEND_EMAIL_4 = 'recipient4@example.com';
+
+		const recipients = getRecipientEmails();
+		expect(recipients).toHaveLength(4);
+		expect(recipients).toEqual([
+			'recipient1@example.com',
+			'recipient2@example.com',
+			'recipient3@example.com',
+			'recipient4@example.com'
+		]);
+
+		// Cleanup
+		if (orig.r1 !== undefined) process.env.RESEND_EMAIL_1 = orig.r1;
+		else delete process.env.RESEND_EMAIL_1;
+		if (orig.r2 !== undefined) process.env.RESEND_EMAIL_2 = orig.r2;
+		else delete process.env.RESEND_EMAIL_2;
+		if (orig.r3 !== undefined) process.env.RESEND_EMAIL_3 = orig.r3;
+		else delete process.env.RESEND_EMAIL_3;
+		if (orig.r4 !== undefined) process.env.RESEND_EMAIL_4 = orig.r4;
+		else delete process.env.RESEND_EMAIL_4;
+		if (orig.legacy1 !== undefined) process.env.RECIPIENT_EMAIL_1 = orig.legacy1;
+		if (orig.legacy2 !== undefined) process.env.RECIPIENT_EMAIL_2 = orig.legacy2;
+	});
+
+	it('should deduplicate recipient emails if duplicates are provided', () => {
+		const orig = {
+			r1: process.env.RESEND_EMAIL_1,
+			r2: process.env.RESEND_EMAIL_2,
+			r3: process.env.RESEND_EMAIL_3,
+			r4: process.env.RESEND_EMAIL_4
+		};
+
+		process.env.RESEND_EMAIL_1 = 'duplicate@example.com';
+		process.env.RESEND_EMAIL_2 = 'duplicate@example.com';
+		process.env.RESEND_EMAIL_3 = 'unique@example.com';
+		delete process.env.RESEND_EMAIL_4;
+
+		const recipients = getRecipientEmails();
+		expect(recipients).toContain('duplicate@example.com');
+		expect(recipients).toContain('unique@example.com');
+		expect(recipients.filter((e) => e === 'duplicate@example.com')).toHaveLength(1);
+
+		if (orig.r1 !== undefined) process.env.RESEND_EMAIL_1 = orig.r1;
+		else delete process.env.RESEND_EMAIL_1;
+		if (orig.r2 !== undefined) process.env.RESEND_EMAIL_2 = orig.r2;
+		else delete process.env.RESEND_EMAIL_2;
+		if (orig.r3 !== undefined) process.env.RESEND_EMAIL_3 = orig.r3;
+		else delete process.env.RESEND_EMAIL_3;
+		if (orig.r4 !== undefined) process.env.RESEND_EMAIL_4 = orig.r4;
+		else delete process.env.RESEND_EMAIL_4;
 	});
 });
