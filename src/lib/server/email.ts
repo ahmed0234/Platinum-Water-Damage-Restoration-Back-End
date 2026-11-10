@@ -228,6 +228,7 @@ export function renderLeadEmailHtml(
 										<div><strong>Submission ID:</strong> <code style="font-family: monospace; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #0f172a;">${safeSubmissionId}</code></div>
 										${safePage ? `<div style="margin-top: 4px;"><strong>Submitted From Page:</strong> <a href="${safePage}" style="color: #dc2626; text-decoration: underline;">${safePage}</a></div>` : ''}
 										${safeConsent ? `<div style="margin-top: 4px;"><strong>Customer Consent:</strong> &ldquo;${safeConsent}&rdquo;</div>` : ''}
+										<div style="margin-top: 4px;"><strong>SMS Consent:</strong> ${data.sms_consent === 'yes' ? 'Yes' : 'No'}</div>
 										<div style="margin-top: 4px;"><strong>Received:</strong> ${formattedDate}</div>
 										<div style="margin-top: 8px; color: #94a3b8;">Internal team notification delivered securely to configured Platinum specialist recipients via Resend.</div>
 									</td>
@@ -283,6 +284,7 @@ export function renderLeadEmailText(
 		`Submission ID: ${data.submission_id || 'N/A'}`,
 		`Submitted URL: ${data.page || 'N/A'}`,
 		`Consent:       ${data.consent || 'N/A'}`,
+		`SMS Consent:   ${data.sms_consent === 'yes' ? 'Yes' : 'No'}`,
 		`Received:      ${timestamp.toUTCString()}`
 	];
 

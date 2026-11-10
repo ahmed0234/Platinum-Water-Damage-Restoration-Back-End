@@ -20,6 +20,7 @@ describe('Email Rendering & Security', () => {
 		page: 'https://www.platinumsg.com/',
 		submission_id: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
 		consent: 'Contact me about this water damage request.',
+		sms_consent: 'yes' as const,
 		gclid: 'EAIaIQobChMI78_xxxxxx',
 		utm_source: 'google',
 		utm_medium: 'cpc',
@@ -37,7 +38,8 @@ describe('Email Rendering & Security', () => {
 		message: '',
 		page: 'https://www.platinumsg.com/',
 		submission_id: 'e0e29b46-7785-408a-9285-b9f1d0b7d7f2',
-		consent: 'Contact me about this water damage request.'
+		consent: 'Contact me about this water damage request.',
+		sms_consent: 'no' as const
 	};
 
 	it('should strictly escape HTML special characters to prevent HTML injection / XSS in email clients', () => {
@@ -120,6 +122,10 @@ describe('Email Rendering & Security', () => {
 		expect(text).toContain('Water leaking from ceiling under second floor bathroom.');
 		expect(text).toContain('Submission ID: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d');
 		expect(text).toContain('Submitted URL: https://www.platinumsg.com/');
+		expect(text).toContain('SMS Consent:   Yes');
+		expect(renderLeadEmailText(sampleDataWithoutAttribution, fixedDate)).toContain(
+			'SMS Consent:   No'
+		);
 		expect(text).toContain('Google Click ID (gclid): EAIaIQobChMI78_xxxxxx');
 		expect(text).toContain('Traffic Source (utm_source): google');
 	});
@@ -138,7 +144,8 @@ describe('sendLeadNotificationEmail execution', () => {
 			zipCode: '76234',
 			damage: 'Pipe burst',
 			issue: 'Pipe burst',
-			submission_id: 'sub_12345678'
+			submission_id: 'sub_12345678',
+			sms_consent: 'no' as const
 		});
 
 		expect(result.success).toBe(false);
@@ -175,7 +182,8 @@ describe('sendLeadNotificationEmail execution', () => {
 			zipCode: '76234',
 			damage: 'Pipe burst',
 			issue: 'Pipe burst',
-			submission_id: 'sub_12345678'
+			submission_id: 'sub_12345678',
+			sms_consent: 'no' as const
 		});
 
 		expect(result.success).toBe(false);

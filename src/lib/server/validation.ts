@@ -8,6 +8,9 @@ export interface LeadSubmissionData {
 	page?: string;
 	submission_id: string;
 	consent?: string;
+	email?: string;
+	// "yes" only when the visitor explicitly ticked the SMS consent checkbox
+	sms_consent: 'yes' | 'no';
 
 	// Optional advertising attribution parameters
 	gclid?: string;
@@ -269,7 +272,35 @@ export function validateFormInput(raw: Record<string, unknown>): ValidationResul
 		}
 	}
 
-	// 10. Tracking / attribution parameters (Optional strings, max 255 characters each)
+	// 10. Email validation (Optional, max 254 characters, basic format check)
+	const rawEmail = raw.email ?? raw.emailAddress ?? raw.email_address;
+	let finalEmail: string | undefined = undefined;
+	if (rawEmail !== undefined && rawEmail !== null) {
+		if (typeof rawEmail !== 'string') {
+			errors.email = 'Email must be a string.';
+		} else {
+			const sanitized = sanitizeString(rawEmail);
+			if (sanitized.length > 254) {
+				errors.email = 'Email cannot exceed 254 characters.';
+			} else if (sanitized.length > 0) {
+				if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sanitized)) {
+					errors.email = 'Please enter a valid email address.';
+				} else {
+					finalEmail = sanitized;
+				}
+			}
+		}
+	}
+
+	// 11. SMS consent (Optional checkbox; anything other than an explicit opt-in is "no")
+	const rawSmsConsent = raw.sms_consent ?? raw.smsConsent;
+	const finalSmsConsent: 'yes' | 'no' =
+		rawSmsConsent === true ||
+		(typeof rawSmsConsent === 'string' && rawSmsConsent.trim().toLowerCase() === 'yes')
+			? 'yes'
+			: 'no';
+
+	// 12. Tracking / attribution parameters (Optional strings, max 255 characters each)
 	const trackingFields = [
 		'gclid',
 		'gbraid',
@@ -315,6 +346,8 @@ export function validateFormInput(raw: Record<string, unknown>): ValidationResul
 			page: finalPage,
 			submission_id: finalSubmissionId,
 			consent: finalConsent,
+			email: finalEmail,
+			sms_consent: finalSmsConsent,
 			...trackingData,
 			// Backwards-compatibility aliases
 			zipCode: finalZip,

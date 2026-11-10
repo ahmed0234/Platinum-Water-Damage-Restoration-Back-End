@@ -37,6 +37,14 @@ export function getResendFromEmail(): string {
 }
 
 /**
+ * Shared secret for the GoHighLevel CRM bridge, sent as the X-Webhook-Secret header.
+ * Configured in Vercel / .env as WEBHOOK_SECRET. Server-only; never log or return it.
+ */
+export function getWebhookSecret(): string {
+	return readEnv('WEBHOOK_SECRET');
+}
+
+/**
  * Configured recipient email addresses.
  * Reads RESEND_EMAIL_1, RESEND_EMAIL_2, RESEND_EMAIL_3, and RESEND_EMAIL_4.
  * Also supports legacy RECIPIENT_EMAIL_1 / RECIPIENT_EMAIL_2 and RECIPIENT_EMAILS as a comma-separated list.

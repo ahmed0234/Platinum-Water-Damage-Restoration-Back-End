@@ -1,16 +1,23 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
+import * as crmModule from '#lib/server/crm.js';
 import * as emailModule from '#lib/server/email.js';
 import { OPTIONS, POST } from './+server.js';
 
 describe('Contact API Endpoint (/api/contact)', () => {
 	beforeEach(() => {
+		// Never hit the real CRM bridge from tests; individual tests override as needed
+		vi.spyOn(crmModule, 'forwardLeadToCrm').mockResolvedValue({ success: true });
 		// Set default environment variables for test execution
 		process.env.ALLOWED_ORIGINS =
 			'https://platinum-landing.vercel.app,http://localhost:5173,https://www.platinumsg.com';
 		process.env.RESEND_API_KEY = 're_test_key_123456';
 		process.env.RECIPIENT_EMAIL_1 = 'lead1@platinumrestoration.com';
 		process.env.RECIPIENT_EMAIL_2 = 'lead2@platinumrestoration.com';
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
 	});
 
 	function createMockEvent(
@@ -309,7 +316,109 @@ describe('Contact API Endpoint (/api/contact)', () => {
 		);
 		// Crucial security check: internal error string / credentials must NEVER leak in API response
 		expect(JSON.stringify(data)).not.toContain('backend.resend.private');
+		// Spec: the CRM forward happens after the email sends
+		expect(crmModule.forwardLeadToCrm).not.toHaveBeenCalled();
 
 		sendSpy.mockRestore();
+	});
+
+	describe('CRM forwarding', () => {
+		const leadPayload = {
+			service: 'Water damage restoration',
+			name: 'Jane Doe',
+			phone: '8175550123',
+			zip: '76234',
+			damage: 'Burst pipe or plumbing leak',
+			message: 'Water in the kitchen.',
+			page: 'https://www.platinumsg.com/?gclid=abc',
+			submission_id: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
+			gclid: 'EAIaIQobChMI78_xxxxxx'
+		};
+
+		async function submit(body: Record<string, unknown>) {
+			const event = createMockEvent(
+				'POST',
+				{ origin: 'https://www.platinumsg.com' },
+				JSON.stringify(body)
+			);
+			return POST(event);
+		}
+
+		it('should forward sms_consent "no" when the checkbox was left unchecked', async () => {
+			vi.spyOn(emailModule, 'sendLeadNotificationEmail').mockResolvedValueOnce({ success: true });
+
+			const response = await submit({ ...leadPayload, sms_consent: 'no' });
+
+			expect(response.status).toBe(200);
+			expect(crmModule.forwardLeadToCrm).toHaveBeenCalledTimes(1);
+			expect(crmModule.forwardLeadToCrm).toHaveBeenCalledWith(
+				expect.objectContaining({
+					name: 'Jane Doe',
+					gclid: 'EAIaIQobChMI78_xxxxxx',
+					page: 'https://www.platinumsg.com/?gclid=abc',
+					sms_consent: 'no'
+				})
+			);
+		});
+
+		it('should default sms_consent to "no" when the field is missing', async () => {
+			vi.spyOn(emailModule, 'sendLeadNotificationEmail').mockResolvedValueOnce({ success: true });
+
+			await submit(leadPayload);
+
+			expect(crmModule.forwardLeadToCrm).toHaveBeenCalledWith(
+				expect.objectContaining({ sms_consent: 'no' })
+			);
+		});
+
+		it('should forward sms_consent "yes" when the checkbox was ticked', async () => {
+			const sendSpy = vi
+				.spyOn(emailModule, 'sendLeadNotificationEmail')
+				.mockResolvedValueOnce({ success: true });
+
+			const response = await submit({ ...leadPayload, sms_consent: 'yes' });
+
+			expect(response.status).toBe(200);
+			expect(sendSpy).toHaveBeenCalledWith(expect.objectContaining({ sms_consent: 'yes' }));
+			expect(crmModule.forwardLeadToCrm).toHaveBeenCalledWith(
+				expect.objectContaining({ sms_consent: 'yes' })
+			);
+		});
+
+		it('should still return 200 and send the email when the CRM forward fails', async () => {
+			const sendSpy = vi
+				.spyOn(emailModule, 'sendLeadNotificationEmail')
+				.mockResolvedValueOnce({ success: true });
+			vi.mocked(crmModule.forwardLeadToCrm).mockResolvedValueOnce({
+				success: false,
+				error: 'CRM request failed (timed out after 5000ms).'
+			});
+
+			const response = await submit(leadPayload);
+
+			expect(response.status).toBe(200);
+			const data = await response.json();
+			expect(data.success).toBe(true);
+			expect(sendSpy).toHaveBeenCalledTimes(1);
+			expect(JSON.stringify(data)).not.toContain('CRM');
+		});
+
+		it('should still return 200 if the CRM forward throws unexpectedly', async () => {
+			vi.spyOn(emailModule, 'sendLeadNotificationEmail').mockResolvedValueOnce({ success: true });
+			vi.mocked(crmModule.forwardLeadToCrm).mockRejectedValueOnce(new Error('boom'));
+			vi.spyOn(console, 'error').mockImplementation(() => {});
+
+			const response = await submit(leadPayload);
+
+			expect(response.status).toBe(200);
+			expect((await response.json()).success).toBe(true);
+		});
+
+		it('should reject a malformed optional email address', async () => {
+			const response = await submit({ ...leadPayload, email: 'not-an-email' });
+			expect(response.status).toBe(400);
+			const data = await response.json();
+			expect(data.errors.email).toBeDefined();
+		});
 	});
 });
