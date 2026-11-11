@@ -95,3 +95,13 @@ export function getAllowedOrigins(): string[] {
 		.map((origin) => origin.trim().replace(/\/+$/, ''))
 		.filter(Boolean);
 }
+
+/**
+ * GoHighLevel CRM forwarding is temporarily PAUSED. Leads are still emailed via Resend;
+ * the CRM integration in crm.ts is kept intact. Set this to `true` to resume forwarding.
+ */
+export const CRM_FORWARDING_ENABLED = false;
+
+export function isCrmForwardingEnabled(): boolean {
+	return CRM_FORWARDING_ENABLED;
+}

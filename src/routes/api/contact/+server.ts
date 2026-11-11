@@ -1,5 +1,5 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { getAllowedOrigins } from '#lib/server/config.js';
+import { getAllowedOrigins, isCrmForwardingEnabled } from '#lib/server/config.js';
 import { extractRequestOrigin, getCorsHeaders, isOriginAllowed } from '#lib/server/cors.js';
 import { forwardLeadToCrm } from '#lib/server/crm.js';
 import { sendLeadNotificationEmail } from '#lib/server/email.js';
@@ -132,10 +132,13 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	// 6. Forward the lead to the GoHighLevel CRM bridge. Awaited so the serverless function
 	// isn't frozen mid-request, but a CRM failure never changes the response once email succeeded.
-	try {
-		await forwardLeadToCrm(validation.data);
-	} catch {
-		console.error(`[Contact] Unexpected CRM forward error for ${validation.data.submission_id}.`);
+	// Currently PAUSED via CRM_FORWARDING_ENABLED in config.ts — processing ends after the email.
+	if (isCrmForwardingEnabled()) {
+		try {
+			await forwardLeadToCrm(validation.data);
+		} catch {
+			console.error(`[Contact] Unexpected CRM forward error for ${validation.data.submission_id}.`);
+		}
 	}
 
 	// 7. Successful response

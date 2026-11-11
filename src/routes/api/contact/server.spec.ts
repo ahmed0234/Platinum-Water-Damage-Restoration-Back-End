@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
+import * as configModule from '#lib/server/config.js';
 import * as crmModule from '#lib/server/crm.js';
 import * as emailModule from '#lib/server/email.js';
 import { OPTIONS, POST } from './+server.js';
@@ -322,7 +323,37 @@ describe('Contact API Endpoint (/api/contact)', () => {
 		sendSpy.mockRestore();
 	});
 
+	it('should not forward to the CRM while forwarding is paused', async () => {
+		const sendSpy = vi
+			.spyOn(emailModule, 'sendLeadNotificationEmail')
+			.mockResolvedValueOnce({ success: true });
+
+		const event = createMockEvent(
+			'POST',
+			{ origin: 'https://www.platinumsg.com' },
+			JSON.stringify({
+				service: 'Water damage restoration',
+				name: 'Jane Doe',
+				phone: '8175550123',
+				zip: '76234',
+				damage: 'Burst pipe or plumbing leak'
+			})
+		);
+		const response = await POST(event);
+
+		expect(configModule.isCrmForwardingEnabled()).toBe(false);
+		expect(response.status).toBe(200);
+		expect((await response.json()).success).toBe(true);
+		expect(sendSpy).toHaveBeenCalledTimes(1);
+		expect(crmModule.forwardLeadToCrm).not.toHaveBeenCalled();
+	});
+
 	describe('CRM forwarding', () => {
+		beforeEach(() => {
+			// Exercise the (currently paused) CRM path so it stays covered for when it is re-enabled
+			vi.spyOn(configModule, 'isCrmForwardingEnabled').mockReturnValue(true);
+		});
+
 		const leadPayload = {
 			service: 'Water damage restoration',
 			name: 'Jane Doe',
